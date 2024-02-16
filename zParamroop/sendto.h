@@ -10,7 +10,10 @@
 #include <sys/types.h>
 
 pthread_t sending;
-List* sending = List_create();
+List sending_data = List_create();
+
+// the function of sending data
+void send(char* hostname, int clientport);
 
 
 

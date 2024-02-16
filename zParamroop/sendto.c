@@ -8,10 +8,11 @@
 #include "list.h"
 #include <pthread.h>
 #include <sys/types.h>
+#include "sendto.h"
 
 
 
-pthread_t sending;
+
 
 void send(char* hostname, int clientport)
 {
@@ -25,7 +26,7 @@ void send(char* hostname, int clientport)
         if (clentIP != 0)
         {
             perror("getaddrinfo() failed");
-            return -1;
+            exit(1);
         }
     
 
@@ -41,9 +42,23 @@ void send(char* hostname, int clientport)
       if (bind(sendtoClient,(struct sockaddr*)&clientSin, sizeof(clientSin)) == -1)
         {
             perror("fail to bind host socket");
-            return -1;
+            exit(1);
         }
+    // get message from the queue
+    char* message = List_trim(sending_data);
+    if (message == NULL)
+    {
+        return;
+    }
 
+
+    // send the data
+    int data = sendto(sendtoClient, (const char*)message, strlen(message),0,(const struct sockaddr*)&servaddr, sizeof(servaddr));
+    if (data == -1)
+    {
+        perror("failed to send");
+    }
+    free(message);
     
     
 
@@ -52,7 +67,3 @@ void send(char* hostname, int clientport)
 
 
 
-void *send message(NULL)
-{
-
-}
