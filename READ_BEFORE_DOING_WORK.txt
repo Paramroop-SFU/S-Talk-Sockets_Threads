@@ -1,0 +1,7 @@
+So im making the a thread to send data 
+so im gonna use one of the heads from list.h 
+IF u are working on the keyboard insert the data to head name in sendingto.h
+Also lets do a reverse queue 
+    - so insert to the head 
+    - and remove from the tail
+    Okay?
