@@ -6,12 +6,17 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "list.h"
+#include <pthread.h>
+pthread p1;
+//thread_create(p1)
 
 #define PORT 6001
 #define MSG_MAX_Len 1024;
 
-int main()
+int main(int argc, char* argv[])
 {
+    // intililzing the socket
+    
     struct sockaddr_in sin;
     memset(&sin,0,sizeof(sin));
     sin.sin_family = AF_INET;
@@ -20,7 +25,6 @@ int main()
 
     // create socket PF can be used 
     int socketDes = socket(AF_INET,SOCK_DGRAM,0);
-
     bind (socketDes, (struct sockaddr*) &sin, sizeof(sin));
 
     while (1)
