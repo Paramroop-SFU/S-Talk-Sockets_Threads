@@ -1,13 +1,13 @@
 #include "list.h"
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 
 int main() {
  
 
-   List* make = List_create();
+   List* hi = List_create();
      char *buffer = (char*)malloc(100*sizeof(char));
       strcpy(buffer,"Hello");
-   // List_append(make,buffer);
+   List_append(hi,buffer);
     return 0;
 }

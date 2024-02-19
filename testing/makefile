@@ -1,12 +1,13 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -pthread
 
-test: list.o test.o
-	g++ -Wall -Wextra -g -o test list.o test.o
+all: s-talk
 
-list.o: list.c list.h
-	g++ -Wall -Wextra -g -c list.
+s-talk: hi.o list.o
+	$(CC) $(CFLAGS) $^ -o $@
 
-test.o: test.c  list.h
-	g++ -Wall -Wextra -g -c test.c
-
+hi.o: hi.c list.h 
+	$(CC) $(CFLAGS) -c $< -o $@
+	
 clean:
-	rm -f test list.o test.o
+	rm -f *.o s-talk
