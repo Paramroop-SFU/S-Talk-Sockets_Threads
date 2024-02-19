@@ -1,19 +1,13 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-
+#include "list.h"
+#include <cstdlib>
+#include <cstring>
 
 int main() {
  
 
-    // Get the hostname
-    char hostname[256];
-    if (gethostname(hostname, sizeof(hostname)) != 0) {
-        perror("gethostname");
-        return 1;
-    }
-
-    printf("Hostname for user : %s\n" , hostname);
-
+   List* make = List_create();
+     char *buffer = (char*)malloc(100*sizeof(char));
+      strcpy(buffer,"Hello");
+   // List_append(make,buffer);
     return 0;
 }

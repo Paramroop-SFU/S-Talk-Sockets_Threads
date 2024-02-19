@@ -49,7 +49,7 @@ int main() {
             break;
         }
 
-        buffer[n] = '\0';  // Null-terminate the received data
+
         printf("%s\n", buffer);
         sleep(12);
     }

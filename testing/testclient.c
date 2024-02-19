@@ -13,7 +13,7 @@
 
 int main()
 {
-    char hello[50] = "hello from client";
+    const char * hello = "hello from client";
     char hellos[50] = "hello from client";
     struct sockaddr_in servaddr = {0};
     const char* hostname = "asb9700u-g02";
