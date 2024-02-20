@@ -37,6 +37,7 @@ while(1)
 {
   if (hello != NULL)
   {
+    
     int message = sendto(dest, (const char*)hello, strlen(hello),0,(const struct sockaddr*)&servaddr, sizeof(servaddr));
     if (message == -1)
     {

@@ -7,6 +7,11 @@ p-talk: testSend.o list.o sendto.o
 s-talk: testing.o list.o sendto.o 
 	$(CC) $(CFLAGS) $^ -o $@
 
+s-pow: s-talk.o list.o sendto.o
+
+s-talk.o: s-talk.c list.h sendto.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
 testSend.o: testSend.c list.h sendto.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
