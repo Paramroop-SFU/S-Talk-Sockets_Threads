@@ -15,7 +15,11 @@
 // the function of sending data
 void sendinfo(char hostname[], int clientport,List* sending_data);
 
+void receive(int userport,List* receive_From);
 
+void keyboard(List*sending_data);
+
+void print_message(List*receive_From);
 
 
 

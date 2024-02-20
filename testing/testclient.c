@@ -10,11 +10,18 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+struct name{
+  void* c;
+};
+
+
 
 int main()
 {
-    const char * hello = "hello from client";
-    char hellos[50] = "hello from client";
+    char * hellos = "hello from client";
+    
+
+    //char hellos[50] = "hello from client";
     struct sockaddr_in servaddr = {0};
     const char* hostname = "asb9700u-g02";
   struct addrinfo hints, *res;
@@ -46,5 +53,4 @@ int main()
   
 
   
-    close(dest);
 }

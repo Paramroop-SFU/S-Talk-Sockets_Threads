@@ -1,5 +1,5 @@
 #include "sendto.h"
-#include "receive.h"
+
 #include "list.h"
 
 
@@ -10,14 +10,10 @@ int main()
         char hostname[30] = {0};
         printf("s-talk ");
         scanf("%d %s %d",&userport,hostname,&clientport);
-        List* broadcast = List_create();
-
-        char* m = "Hello";
-        List_prepend(broadcast,m);
-        sendinfo(hostname,clientport,broadcast);
-        return 0;
-       
-
+        List*l1 = List_create();
+        char magic[30] = "hi";
+        List_prepend(l1,&magic);
+        sendinfo(hostname,clientport,l1);
         
         
 }
