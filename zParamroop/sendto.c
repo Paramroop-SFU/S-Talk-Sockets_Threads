@@ -1,143 +1,266 @@
 
 #include "sendto.h"
 
+pthread_mutex_t data_control;
+pthread_cond_t keyboard_item_ready;
+pthread_cond_t received_item_ready;
+pthread_t inputW, show, scanM, sendM;
+bool end = false;
 
+bool terminate(char *string)
+{
+  if (string == NULL) // checks if string is NULL
+    return false;
 
+  int length = strlen(string); // grabs the length and checks
+  if (length == 0)
+  {
+    return false;
+  }
+  char first = string[0]; // store first letter
 
+  if (first == '!' && length == 1) // check if both conditions are true
+    return true;
 
-void sendinfo(char hostname[], int clientport, List* sending_data)
-{    
-    struct sockaddr_in servaddr = {0};
-    struct addrinfo hints, *res;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
-    char string_num[10];
-    sprintf(string_num,"%d",clientport);
-    int hostIP = getaddrinfo(hostname, string_num, &hints, &res);
-    if (hostIP != 0) {
-        perror("getaddrinfo() failed");
-        exit(1);
-    }
+  return false;
+}
 
-    int dest = socket(AF_INET,SOCK_DGRAM,0);
-    if (dest == -1)
+void *sendinfo(void *value)
+{
+
+  arg_value *val = (arg_value *)value;
+  // char hostname[], int clientport, List* sending_data
+  char *hostname = val->host;
+  int clientport = val->client;
+  List *sending_data = val->list_send;
+
+  // Convert client host name to a IP address
+  struct sockaddr_in servaddr = {0};
+  struct addrinfo hints, *res;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_DGRAM;
+  char string_num[30];
+  sprintf(string_num, "%d", clientport);
+  int hostIP = getaddrinfo(hostname, string_num, &hints, &res);
+  if (hostIP != 0)
+  {
+    perror("getaddrinfo() failed");
+    exit(1);
+  }
+
+  // create socket
+  int dest = socket(AF_INET, SOCK_DGRAM, 0);
+  if (dest == -1)
+  {
+    perror("failed to make socket");
+    exit(1);
+  }
+
+  // write the server information
+  servaddr.sin_family = AF_INET;
+  servaddr.sin_addr.s_addr = ((struct sockaddr_in *)res->ai_addr)->sin_addr.s_addr;
+  servaddr.sin_port = htons(clientport);
+  freeaddrinfo(res); // Free the linked list
+
+  // sending data to client
+  while (1)
+  {
+    
+    // allowing only one function access the list at a time
+    pthread_mutex_lock(&data_control);
+    char *hello = (char *)List_trim(sending_data); // get the word from the list
+    if (hello == NULL)
     {
-      perror("failed to make socket");
+      pthread_cond_wait(&keyboard_item_ready, &data_control); // if null make the thread wait for a input
+      hello = (char *)List_trim(sending_data);
+    }
+    pthread_mutex_unlock(&data_control); // give away access to the mutex
+    if (hello != NULL)                   // if not null send data
+    {
+      int message = sendto(dest, (const char *)hello, strlen(hello), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+      if (message == -1)
+      {
+        perror("failed to send");
+        exit(1);
+      }
+      if (terminate(hello))
+      {
+        free(hello);    
+        pthread_cancel(scanM);
+        pthread_cancel(show);
+         close(dest);
+        return NULL;
+      }
+      free(hello); // free the data
+    }
+ 
+  }
+
+ 
+  return NULL;
+}
+
+void *receive(void *value)
+{
+  arg_value *val = (arg_value *)value;
+  // int userport,List* receive_From
+  int userport = val->user;
+  List *receive_From = val->list_rec;
+
+  char hostname[30];
+  if (gethostname(hostname, sizeof(hostname)) != 0) // get the users hostname
+  {
+    perror("failed to get user hostname");
+    exit(1);
+  }
+  char string_num[10];
+  sprintf(string_num, "%d", userport); // convert the port number to a string
+
+  // get the ip address from hostname
+  struct addrinfo hintss, *ress;
+  memset(&hintss, 0, sizeof(hintss));
+  hintss.ai_family = AF_INET;
+  hintss.ai_socktype = SOCK_DGRAM;
+
+  int hostIP = getaddrinfo(hostname, string_num, &hintss, &ress);
+  if (hostIP != 0)
+  {
+    perror("getaddrinfo() failed");
+    exit(1);
+  }
+  // create socket
+  int dest = socket(AF_INET, SOCK_DGRAM, 0);
+  if (dest == -1)
+  {
+    perror("socket() failed");
+    exit(1);
+  }
+
+  // fill the information of the socket
+  struct sockaddr_in servaddrs = {0};
+  servaddrs.sin_family = AF_INET;
+  servaddrs.sin_addr.s_addr = ((struct sockaddr_in *)ress->ai_addr)->sin_addr.s_addr;
+  servaddrs.sin_port = htons(userport);
+
+  // bind the port and socket
+  int rc = bind(dest, (const struct sockaddr *)&servaddrs, sizeof(servaddrs));
+  if (rc == -1)
+  {
+    perror("bind() failed");
+    close(dest);
+    exit(1);
+  }
+  socklen_t len = sizeof(servaddrs);
+  freeaddrinfo(ress); // Free the linked list
+  // constantly get the clients data
+  while (1)
+  {
+   
+    char buffer[300] = {0}; // buffer for the information
+    // grab the information from the user
+    int n = recvfrom(dest, buffer, sizeof(buffer) - 1, 0, (struct sockaddr *)&servaddrs, &len);
+    if (n == -1)
+    {
+      perror("recvfrom() failed");
       exit(1);
     }
 
-      servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = ((struct sockaddr_in*)res->ai_addr)->sin_addr.s_addr;
-    servaddr.sin_port = htons(clientport);
-
-    char * hello = (char*)List_trim(sending_data);
-
-while(1)
-{
-  if (hello != NULL)
-  {
-    
-    int message = sendto(dest, (const char*)hello, strlen(hello),0,(const struct sockaddr*)&servaddr, sizeof(servaddr));
-    if (message == -1)
+    // allocate information for the message
+    char *mem_word = (char *)malloc(300 * sizeof(char));
+    if (mem_word == NULL)
     {
-        perror("failed to send");
-        exit(1);
+      perror("failed to allocate memory");
+      exit(1);
     }
-  }
-  else
-  {
-
-  }
-}
+    strcpy(mem_word, buffer);
+    // try to get access of the mutex to access the list
+    pthread_mutex_lock(&data_control);
+    List_prepend(receive_From, mem_word);
     
-    close(dest);
-
-}
-
-
-void receive(int userport,List* receive_From)
-{
-    char buffer[100] = {0};
-    char hostname[15];
-    if (gethostname(hostname, sizeof(hostname)) != 0)
-    {
-        perror("failed to get user hostname");
-        exit(1);
-    }
-    char string_num[10];
-    sprintf(string_num,"%d",userport);
+    pthread_mutex_unlock(&data_control);
+    pthread_cond_signal(&received_item_ready);
     
-    struct addrinfo hintss, *ress;
-    memset(&hintss, 0, sizeof(hintss));
-    hintss.ai_family = AF_INET;
-    hintss.ai_socktype = SOCK_DGRAM;
-
-    int hostIP = getaddrinfo(hostname, string_num, &hintss, &ress);
-    if (hostIP != 0) {
-        perror("getaddrinfo() failed");
-        exit(1);
-    }
+    
+  }
   
-
-    int dest = socket(AF_INET, SOCK_DGRAM, 0);
-    if (dest == -1) {
-        perror("socket() failed");
-        exit(1);
-    }
-    struct sockaddr_in servaddrs = {0};
-    servaddrs.sin_family = AF_INET;
-    servaddrs.sin_addr.s_addr = ((struct sockaddr_in*)ress->ai_addr)->sin_addr.s_addr;
-    servaddrs.sin_port = htons(userport);
-      int rc = bind(dest, (const struct sockaddr*)&servaddrs, sizeof(servaddrs));
-    if (rc == -1) {
-        perror("bind() failed");
-        close(dest);
-        exit(1);
-    }
-  socklen_t len = sizeof(servaddrs);
-
-        int n = recvfrom(dest, buffer, sizeof(buffer) - 1, 0, (struct sockaddr*)&servaddrs, &len);
-        if (n == -1) {
-            perror("recvfrom() failed");
-            
-        }
-
-
-        printf("%s\n", buffer);
-        // if i want to make it better make malloc depend on string size
-      char* mem_word = (char*)malloc(100*sizeof(char));
-      if (mem_word == NULL)
-      {
-        perror("failed to allocate memory");
-        exit(1);
-      }
-    strcpy(mem_word,buffer);
-    List_prepend(receive_From,mem_word);
-     freeaddrinfo(ress);  // Free the linked list
-     close(dest);
-   // return 0;
 }
 
-
-void keyboard(List* sending_data)
+void *keyboard(void *value)
 {
-  while(1)
+  List *sending_data = (List *)value; // list data
+
+  while (1)
   {
-    char *character = (char*)malloc(100*sizeof(char));
-    scanf("%s",character);
-    List_prepend(sending_data,character); 
+    if (end == true)
+    {
+      return NULL;
+    }
+    char temp[300];
+
+    scanf("%[^\n]s", temp);
+    getchar();
+     char *character = (char *)malloc(300 * sizeof(char));
+     strcpy(character,temp);
+    pthread_mutex_lock(&data_control);
+    List_prepend(sending_data, character);
+    pthread_mutex_unlock(&data_control);
+    pthread_cond_signal(&keyboard_item_ready);
+
+    if (terminate(character))
+    {
+      return NULL;
+    }
   }
+
+  return NULL;
 }
 
-void print_message(List*receive_From)
+void *print_message(void *value)
 {
-  while(1)
+  arg_value *val = (arg_value *)value;
+  List *receive_From = val->list_rec;
+  List *sending_data = val->list_send;
+  while (1)
   {
-    char* print_message = (char*)List_trim(receive_From);
+    pthread_mutex_lock(&data_control);
+    //
+
+    char *print_message = (char *)List_trim(receive_From);
+    if (print_message == NULL)
+    {
+      pthread_cond_wait(&received_item_ready, &data_control);
+      print_message = (char *)List_trim(receive_From);
+    }
     if (print_message != NULL)
     {
-      printf("%s\n",print_message);
+      if (terminate(print_message))
+      {
+        printf("Remote Client: %s\n", print_message);
+        
+         char *character = (char *)malloc(300 * sizeof(char));
+         strcpy(character,print_message);
+         List_prepend(sending_data, character);
+         pthread_cancel(inputW);
+         
+         pthread_cond_signal(&keyboard_item_ready);
+          free(print_message);
+        pthread_mutex_unlock(&data_control);
+        pthread_exit(NULL);
+      }
+
+
+      printf("Remote Client: %s\n", print_message);
+      free(print_message);
+      print_message = NULL;
     }
+    pthread_mutex_unlock(&data_control);
+    
   }
+  
+}
+
+void free2(void *pitem)
+{
+  free(pitem);
 }
