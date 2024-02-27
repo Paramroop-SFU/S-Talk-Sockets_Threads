@@ -7,6 +7,7 @@ pthread_cond_t received_item_ready;
 pthread_t inputW, show, scanM, sendM;
 bool end = false;
 
+
 bool terminate(char *string)
 {
   if (string == NULL) // checks if string is NULL
@@ -18,12 +19,16 @@ bool terminate(char *string)
     return false;
   }
   char first = string[0]; // store first letter
-
+ 
   if (first == '!' && length == 1) // check if both conditions are true
     return true;
 
   return false;
 }
+
+
+
+
 
 void *sendinfo(void *value)
 {
@@ -33,14 +38,20 @@ void *sendinfo(void *value)
   char *hostname = val->host;
   int clientport = val->client;
   List *sending_data = val->list_send;
+  //char host[30] = hostname;
+
+
 
   // Convert client host name to a IP address
-  struct sockaddr_in servaddr = {0};
+  struct sockaddr_in servaddr= {0};
+
   struct addrinfo hints, *res;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_DGRAM;
   char string_num[30];
+
+
   sprintf(string_num, "%d", clientport);
   int hostIP = getaddrinfo(hostname, string_num, &hints, &res);
   if (hostIP != 0)
@@ -63,7 +74,7 @@ void *sendinfo(void *value)
   servaddr.sin_port = htons(clientport);
   freeaddrinfo(res); // Free the linked list
 
-  // sending data to client
+ 
   while (1)
   {
     
@@ -103,10 +114,10 @@ void *sendinfo(void *value)
 
 void *receive(void *value)
 {
-  arg_value *val = (arg_value *)value;
-  // int userport,List* receive_From
+  arg_value *val = (arg_value *)value; // get the info from list
+
   int userport = val->user;
-  List *receive_From = val->list_rec;
+  List *receive_From = val->list_rec; // pull the data
 
   char hostname[30];
   if (gethostname(hostname, sizeof(hostname)) != 0) // get the users hostname
@@ -114,21 +125,12 @@ void *receive(void *value)
     perror("failed to get user hostname");
     exit(1);
   }
+
   char string_num[10];
   sprintf(string_num, "%d", userport); // convert the port number to a string
 
   // get the ip address from hostname
-  struct addrinfo hintss, *ress;
-  memset(&hintss, 0, sizeof(hintss));
-  hintss.ai_family = AF_INET;
-  hintss.ai_socktype = SOCK_DGRAM;
-
-  int hostIP = getaddrinfo(hostname, string_num, &hintss, &ress);
-  if (hostIP != 0)
-  {
-    perror("getaddrinfo() failed");
-    exit(1);
-  }
+ 
   // create socket
   int dest = socket(AF_INET, SOCK_DGRAM, 0);
   if (dest == -1)
@@ -140,32 +142,34 @@ void *receive(void *value)
   // fill the information of the socket
   struct sockaddr_in servaddrs = {0};
   servaddrs.sin_family = AF_INET;
-  servaddrs.sin_addr.s_addr = ((struct sockaddr_in *)ress->ai_addr)->sin_addr.s_addr;
+  servaddrs.sin_addr.s_addr = INADDR_ANY;
   servaddrs.sin_port = htons(userport);
 
   // bind the port and socket
-  int rc = bind(dest, (const struct sockaddr *)&servaddrs, sizeof(servaddrs));
-  if (rc == -1)
+
+  if(bind(dest, (const struct sockaddr *)&servaddrs, sizeof(servaddrs)))
   {
     perror("bind() failed");
     close(dest);
     exit(1);
   }
   socklen_t len = sizeof(servaddrs);
-  freeaddrinfo(ress); // Free the linked list
+   
   // constantly get the clients data
   while (1)
   {
    
     char buffer[300] = {0}; // buffer for the information
+  
     // grab the information from the user
+  
     int n = recvfrom(dest, buffer, sizeof(buffer) - 1, 0, (struct sockaddr *)&servaddrs, &len);
     if (n == -1)
     {
       perror("recvfrom() failed");
       exit(1);
     }
-
+    
     // allocate information for the message
     char *mem_word = (char *)malloc(300 * sizeof(char));
     if (mem_word == NULL)
@@ -179,7 +183,7 @@ void *receive(void *value)
     List_prepend(receive_From, mem_word);
     
     pthread_mutex_unlock(&data_control);
-    pthread_cond_signal(&received_item_ready);
+    pthread_cond_signal(&received_item_ready); // signal print to start working again
     
     
   }
@@ -196,18 +200,18 @@ void *keyboard(void *value)
     {
       return NULL;
     }
-    char temp[300];
+    char temp[300]; // word buffer
 
-    scanf("%[^\n]s", temp);
+    scanf("%[^\n]s", temp); // get info
     getchar();
-     char *character = (char *)malloc(300 * sizeof(char));
+     char *character = (char *)malloc(300 * sizeof(char)); // allocate the data
      strcpy(character,temp);
-    pthread_mutex_lock(&data_control);
+    pthread_mutex_lock(&data_control); // access the mutex to get access to list
     List_prepend(sending_data, character);
     pthread_mutex_unlock(&data_control);
-    pthread_cond_signal(&keyboard_item_ready);
+    pthread_cond_signal(&keyboard_item_ready); // signal sendto if its currently waiting
 
-    if (terminate(character))
+    if (terminate(character)) // terminate the thread
     {
       return NULL;
     }
@@ -216,27 +220,28 @@ void *keyboard(void *value)
   return NULL;
 }
 
-void *print_message(void *value)
+void *print_message(void *value) // print messsage
 {
-  arg_value *val = (arg_value *)value;
+  arg_value *val = (arg_value *)value; // get the data from the argument
   List *receive_From = val->list_rec;
   List *sending_data = val->list_send;
   while (1)
   {
-    pthread_mutex_lock(&data_control);
+    pthread_mutex_lock(&data_control); // try to get into the mutex
     //
 
-    char *print_message = (char *)List_trim(receive_From);
-    if (print_message == NULL)
+    char *print_message = (char *)List_trim(receive_From); // access list and get message
+    if (print_message == NULL) // check if message is null
     {
-      pthread_cond_wait(&received_item_ready, &data_control);
-      print_message = (char *)List_trim(receive_From);
+      pthread_cond_wait(&received_item_ready, &data_control); // if so make it wait
+      print_message = (char *)List_trim(receive_From); // then try again once it gets the signal
     }
-    if (print_message != NULL)
+    if (print_message != NULL) // check if message is not null
     {
-      if (terminate(print_message))
+
+      if (terminate(print_message)) // if message is !
       {
-        printf("Remote Client: %s\n", print_message);
+        printf("Remote Client: %s\n", print_message); // print it then terminate all of the threads
         
          char *character = (char *)malloc(300 * sizeof(char));
          strcpy(character,print_message);
@@ -250,17 +255,13 @@ void *print_message(void *value)
       }
 
 
-      printf("Remote Client: %s\n", print_message);
+      printf("Remote Client: %s\n", print_message); // normall just prints
       free(print_message);
       print_message = NULL;
     }
-    pthread_mutex_unlock(&data_control);
+    pthread_mutex_unlock(&data_control); // exit mutex
     
   }
   
 }
 
-void free2(void *pitem)
-{
-  free(pitem);
-}
