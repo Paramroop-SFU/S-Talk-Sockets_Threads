@@ -38,6 +38,7 @@ void *sendinfo(void *value)
   char *hostname = val->host;
   int clientport = val->client;
   List *sending_data = val->list_send;
+  int dest = val->dest;
   //char host[30] = hostname;
 
 
@@ -60,13 +61,7 @@ void *sendinfo(void *value)
     exit(1);
   }
 
-  // create socket
-  int dest = socket(AF_INET, SOCK_DGRAM, 0);
-  if (dest == -1)
-  {
-    perror("failed to make socket");
-    exit(1);
-  }
+  
 
   // write the server information
   servaddr.sin_family = AF_INET;
@@ -100,7 +95,7 @@ void *sendinfo(void *value)
         free(hello);    
         pthread_cancel(scanM);
         pthread_cancel(show);
-         close(dest);
+        close(dest);
         return NULL;
       }
       free(hello); // free the data
@@ -118,6 +113,7 @@ void *receive(void *value)
 
   int userport = val->user;
   List *receive_From = val->list_rec; // pull the data
+  int dest = val->dest;
 
   char hostname[30];
   if (gethostname(hostname, sizeof(hostname)) != 0) // get the users hostname
@@ -131,13 +127,8 @@ void *receive(void *value)
 
   // get the ip address from hostname
  
-  // create socket
-  int dest = socket(AF_INET, SOCK_DGRAM, 0);
-  if (dest == -1)
-  {
-    perror("socket() failed");
-    exit(1);
-  }
+  
+  
 
   // fill the information of the socket
   struct sockaddr_in servaddrs = {0};

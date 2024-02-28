@@ -13,6 +13,7 @@ extern pthread_mutex_t data_control;
 extern pthread_cond_t keyboard_item_ready;
 extern pthread_cond_t received_item_ready;
 extern pthread_t inputW, show, scanM, sendM;
+extern int dest;
 
 struct arg_value
 {
@@ -21,6 +22,7 @@ struct arg_value
     char*host;
     List* list_send;
     List* list_rec;
+    int dest;
 };
 
 typedef struct arg_value arg_value;

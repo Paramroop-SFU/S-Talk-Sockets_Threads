@@ -23,8 +23,12 @@ int main( int argc,char* argv[])
  
     int userport = atoi(argv[1]); // get values from argument
     int clientport = atoi(argv[3]);
-   
-
+    int dest = socket(AF_INET, SOCK_DGRAM, 0);
+    if (dest == -1)
+    {
+      perror("socket() failed");
+      exit(1);
+    }
 
 
     arg_value* UDP_data = (arg_value*)malloc(sizeof(arg_value)); // allocate memory
@@ -38,6 +42,8 @@ int main( int argc,char* argv[])
     UDP_data->user = userport;
     UDP_data->list_send = data_Send;
     UDP_data->list_rec = data_Receive;
+    UDP_data->dest = dest;
+
     printf("grabbing connection ... \n");
     pthread_mutex_init(&data_control,NULL);
 
@@ -51,14 +57,14 @@ int main( int argc,char* argv[])
     pthread_create(&inputW, NULL, keyboard, (void*)data_Send);
 
     pthread_create(&sendM, NULL, sendinfo, (void*)UDP_data);
-     printf("connection successful! \n");
-      printf("press just \'!\' to cancel s-talk\n");
+    printf("connection successful! \n");
+    printf("press just \'!\' to cancel s-talk\n");
    pthread_join(scanM,NULL);
    pthread_join(show,NULL);
    pthread_join(inputW,NULL);
    pthread_join(sendM,NULL);
    pthread_mutex_destroy(&data_control);
-   
+   close(dest);
    free(UDP_data);
    return 0;
 }
