@@ -28,6 +28,11 @@ int main( int argc,char* argv[])
 
 
     arg_value* UDP_data = (arg_value*)malloc(sizeof(arg_value)); // allocate memory
+    if (UDP_data == NULL)
+    {
+      perror("failed to allocate");
+      exit(1);
+    }
     UDP_data->client = clientport; // set the list values
     UDP_data->host = argv[2];
     UDP_data->user = userport;

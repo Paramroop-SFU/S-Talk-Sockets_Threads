@@ -205,6 +205,11 @@ void *keyboard(void *value)
     scanf("%[^\n]s", temp); // get info
     getchar();
      char *character = (char *)malloc(300 * sizeof(char)); // allocate the data
+     if (character == NULL)
+     {
+      perror("failed to allocate");
+      exit(1);
+     }
      strcpy(character,temp);
     pthread_mutex_lock(&data_control); // access the mutex to get access to list
     List_prepend(sending_data, character);
@@ -244,6 +249,11 @@ void *print_message(void *value) // print messsage
         printf("Remote Client: %s\n", print_message); // print it then terminate all of the threads
         
          char *character = (char *)malloc(300 * sizeof(char));
+         if (character == NULL)
+         {
+          perror("failed to allocate");
+          exit(1);
+         }
          strcpy(character,print_message);
          List_prepend(sending_data, character);
          pthread_cancel(inputW);
