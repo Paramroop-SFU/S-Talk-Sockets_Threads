@@ -2,7 +2,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pthread 
 
-
 s-talk: s-talk.o list.o sendto.o 
 	$(CC) $(CFLAGS) $^ -o $@
 

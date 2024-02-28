@@ -74,7 +74,7 @@ void *sendinfo(void *value)
   servaddr.sin_port = htons(clientport);
   freeaddrinfo(res); // Free the linked list
 
- 
+
   while (1)
   {
     
