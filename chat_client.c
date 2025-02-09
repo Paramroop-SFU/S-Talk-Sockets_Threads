@@ -1,5 +1,5 @@
 
-#include "sendto.h"
+#include "chat_client.h"
 
 pthread_mutex_t data_control;
 pthread_cond_t keyboard_item_ready;
